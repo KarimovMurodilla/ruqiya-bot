@@ -22,12 +22,11 @@ class User(Base):
         sa.Text, unique=False, nullable=True
     )
     """ Telegram user name """
-    first_name: Mapped[str] = mapped_column(
-        sa.Text, unique=False, nullable=True
+    full_name: Mapped[str] = mapped_column(
+        sa.String(150), unique=False, nullable=True
     )
-    """ Telegram profile first name """
-    second_name: Mapped[str] = mapped_column(
-        sa.Text, unique=False, nullable=True
+    phone_number: Mapped[str] = mapped_column(
+        sa.String(50), unique=False, nullable=True
     )
     language_code: Mapped[Locales] = mapped_column(sa.Enum(Locales), unique=False, nullable=True)
     """ Telegram profile second name """
@@ -39,4 +38,4 @@ class User(Base):
     created_at: Mapped[Optional[Annotated[datetime.datetime, mapped_column(nullable=False, default=datetime.datetime.utcnow)]]]
 
     def __str__(self):
-        return f"{self.first_name}"
+        return f"{self.full_name}"

@@ -72,7 +72,7 @@ class Configuration:
 
     debug = bool(getenv('DEBUG'))
     logging_level = int(getenv('LOGGING_LEVEL', logging.INFO))
-    default_locale = Locales.UZ
+    default_locale = Locales.LATIN
 
     db = DatabaseConfig()
     redis = RedisConfig()

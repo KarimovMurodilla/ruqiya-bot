@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import create_async_engine as _create_async_engine
 from src.configuration import conf
 
 from .repositories import (
-    UserRepo
+    UserRepo, ProductRepo, OrderRepo, CartRepo
 )
 
 
@@ -28,6 +28,9 @@ class Database:
     """
 
     user: UserRepo
+    product: ProductRepo
+    order: OrderRepo
+    cart: CartRepo
 
     session: AsyncSession
 
@@ -35,6 +38,9 @@ class Database:
         self,
         session: AsyncSession,
         user: UserRepo = None,
+        product: ProductRepo = None,
+        order: OrderRepo = None,
+        cart: CartRepo = None,
     ):
         """Initialize Database class.
 
@@ -42,3 +48,6 @@ class Database:
         """
         self.session = session
         self.user = user or UserRepo(session=session)
+        self.product = product or ProductRepo(session=session)
+        self.order = user or OrderRepo(session=session)
+        self.cart = user or CartRepo(session=session)

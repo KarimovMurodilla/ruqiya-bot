@@ -17,6 +17,5 @@ class LocaleIdentificationMode(enum.Enum):
 
 class Locales(str, enum.Enum):
     """ Locales supported by app """
-    EN = 'en'
-    RU = 'ru'
-    UZ = 'uz'
+    LATIN = 'latin'
+    CYRILLIC = 'cyrillic'
