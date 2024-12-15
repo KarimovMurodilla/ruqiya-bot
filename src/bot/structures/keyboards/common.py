@@ -1,7 +1,11 @@
 from typing import List, Tuple
 
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
+from aiogram.types import (
+    InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, 
+    KeyboardButton, KeyboardButtonRequestUsers
+)
 from src.bot.utils.messages import default_languages, regions
+from src.bot.utils.transliterate import transliterate
 
 
 def get_languages(flag="lang"):
@@ -30,10 +34,10 @@ def get_main_menu(user_lang: str):
     return main_menu_keyboard
 
 
-def get_admin_menu(user_lang):
+def get_admin_menu(user_lang: str = 'LATIN'):
     admin_menu_keyboard = ReplyKeyboardMarkup(keyboard=[
         [
-            KeyboardButton(text="👤Statistika"),
+            KeyboardButton(text="👤 Statistika"),
             KeyboardButton(text="✍️ Habar yuborish")
         ],
         [
@@ -42,10 +46,16 @@ def get_admin_menu(user_lang):
         ],
         [
             KeyboardButton(text="💸 Min Summa"),
-            KeyboardButton(text="🚫 Foydalanuvchini bloklash")
+            KeyboardButton(text="🚫 Foydalanuvchini bloklash", request_users=KeyboardButtonRequestUsers(
+                    request_id=1, user_is_bot=False, request_username=True, request_name=True, max_quantity=10
+                )
+            )
         ],
         [
-            KeyboardButton(text="🚫 Foydalanuvchini blokdan ochish")
+            KeyboardButton(text="🚫 Foydalanuvchini blokdan ochish", request_users=KeyboardButtonRequestUsers(
+                    request_id=2, user_is_bot=False, request_username=True, request_name=True, max_quantity=10
+                )
+            )
         ]
     ], resize_keyboard=True)
     return admin_menu_keyboard
@@ -63,15 +73,15 @@ def get_phone_number(user_lang: str):
 def get_location(user_lang: str = None):
     main_menu_keyboard = ReplyKeyboardMarkup(keyboard=[
         [
-            KeyboardButton(text="Lokatsiyani jo'natish", request_location=True)
+            KeyboardButton(text=transliterate("Lokatsiyani jo'natish", user_lang), request_location=True)
         ]
     ], resize_keyboard=True )
     return main_menu_keyboard
 
-def show_products(data: List[Tuple]):
+def show_products(data: List[Tuple], user_lang: str):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text=data[i][0], callback_data=str(data[i][1])) 
+            InlineKeyboardButton(text=transliterate(data[i][0], user_lang), callback_data=str(data[i][1])) 
         ]
         for i in range(len(data))
     ])
@@ -90,36 +100,38 @@ def make_order_or_back(user_lang: str):
     return keyboard
 
 
-def show_regions():
+def show_regions(user_lang: str):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text=region, callback_data=region)
-        ]
-        for region in regions 
+            InlineKeyboardButton(text=transliterate(region, user_lang), callback_data=region)
+            for region in regions
+        ][n:n+3]
+        for n in range(0, len(regions), 3)
     ])
     return keyboard
 
 
-def show_distincts(region: str):
+def show_distincts(region: str, user_lang: str):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text=district, callback_data=district) 
-        ]
-        for district in regions[region]
+            InlineKeyboardButton(text=transliterate(district, user_lang), callback_data=district)
+            for district in regions[region]
+        ][n:n+3]
+        for n in range(0, len(regions), 3)
     ])
     return keyboard
 
 
-def show_settings():
+def show_settings(user_lang: str):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Tilni o'zgartirish", callback_data="change_lang"),
+            InlineKeyboardButton(text=transliterate("Tilni o'zgartirish", user_lang), callback_data="change_lang"),
         ],
         [
-            InlineKeyboardButton(text="Telefon raqamini o'zgartirish", callback_data="change_phone_number"),
+            InlineKeyboardButton(text=transliterate("Telefon raqamini o'zgartirish", user_lang), callback_data="change_phone_number"),
         ],
         [
-            InlineKeyboardButton(text="To'liq ismni o'zgartirish", callback_data="change_name"),
+            InlineKeyboardButton(text=transliterate("To'liq ismni o'zgartirish", user_lang), callback_data="change_name"),
         ]
     ])
 

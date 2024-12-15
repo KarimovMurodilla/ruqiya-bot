@@ -30,6 +30,13 @@ class ProductRepo(Repository[Product]):
         )
         await self.session.commit()
 
+    async def get_product(self, **filters):
+        product = await self.session.scalar(
+            select(Product).filter_by(**filters).limit(1)
+        )
+
+        return product
+    
     async def get_all_products(self):
         result = await self.session.scalars(
             select(Product)
@@ -37,3 +44,7 @@ class ProductRepo(Repository[Product]):
 
         products = result.all()
         return products
+    
+    async def delete(self, product_id: int):
+        await super().delete(Product.id == product_id)
+        await self.session.commit()

@@ -56,6 +56,5 @@ class CartRepo(Repository[Cart]):
         await self.session.commit()
 
     async def delete_cart(self, cart_id: int) -> None:
-        statement = delete(Cart).where(Cart.id == cart_id)
-        await self.session.execute(statement)
+        await super().delete(Cart.id == cart_id)
 

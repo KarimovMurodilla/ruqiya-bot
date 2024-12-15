@@ -58,11 +58,11 @@ class UserRepo(Repository[User]):
     
     async def update_user(self, user_id: int, **kwargs) -> User:
         """Update user by id with new data."""
-        async with self.session.begin():
-            stmt = (
-                update(User)
-                .where(User.user_id == user_id)
-                .values(**kwargs)
-            )
-            await self.session.execute(stmt)
-            await self.session.commit()
+        # async with self.session.begin():
+        stmt = (
+            update(User)
+            .where(User.user_id == user_id)
+            .values(**kwargs)
+        )
+        await self.session.execute(stmt)
+        await self.session.commit()

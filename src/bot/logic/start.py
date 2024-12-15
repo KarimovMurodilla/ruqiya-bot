@@ -4,14 +4,16 @@ from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import CommandStart
 
+from src.cache import Cache
 from src.db.database import Database
 from src.bot.structures.keyboards import common
 from src.bot.structures.fsm.registration import RegisterGroup
 from src.language.translator import LocalizedTranslator
-from src.bot.utils.messages import default_languages, introduction_template, check_phone
-from src.cache import Cache
+from src.bot.utils.messages import default_languages, introduction_template, check_phone, fix_phone
+from src.bot.filters.user_filter import UserFilter
 
 start_router = Router(name='start')
+start_router.message.filter(UserFilter())
 
 
 @start_router.message(CommandStart())
@@ -80,7 +82,7 @@ async def get_phone_number(message: types.Message, db: Database, cache: Cache, s
         user_id=message.from_user.id,
         user_name=message.from_user.username,
         full_name=fullname,
-        phone_number=message.contact.phone_number,
+        phone_number=fix_phone(phone_number),
         language=lang
     )
     

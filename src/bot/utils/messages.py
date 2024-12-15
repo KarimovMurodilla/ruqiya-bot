@@ -61,7 +61,8 @@ default_languages = {
         "contact_update": "Sizning telefon raqamingiz muvaffaqiyatli yangilandi:",
         "successful_registration": "Muvaffaqiyatli ro'yxatdan o'tdi",
         "sorry": "Kechirasiz, boshqa raqamni sinab ko'ring",
-        "send_number": "Raqamni yuborish"
+        "send_number": "Raqamni yuborish",
+        "min_count_product": "Minimal {} ta tovar harid qilishingiz mumkin"
     },
 
     "CYRILLIC": {
@@ -113,7 +114,8 @@ default_languages = {
         "contact": "Илтимос рақамингизни юборинг",
         "successful_registration": "Муваффақиятли рўйхатдан ўтди",
         "sorry": "Кечирасиз, бошқа рақамни синаб кўринг",
-        "send_number": "Ракамни юбориш"
+        "send_number": "Ракамни юбориш",
+        "min_count_product": "Минимал {} та товар ҳарид қилишингиз мумкин"
     }
 }
 
@@ -158,11 +160,24 @@ regions = {
 }
 
 
+def get_product_info(user_lang: str, product_name: str, price: str):
+    data = {
+        "LATIN": f"📦 Maxsulotlar: {product_name}\n" \
+            f"✅ Narxi: {price} so'm\n" \
+            f"🚚 Yetkazib berish Bepul",
+        "CYRILLIC": f"📦 Маҳсулотлар: {product_name}\n" \
+            f"✅ Hархи: {price} сўм\n" \
+            f"🚚 Етказиб бериш Бепул"
+    }
+    return data[user_lang]
+
+
 def check_phone(phone_number):
     pattern = r'^\+998\d{9}$'
     return re.match(pattern, phone_number) is not None
 
-def fix_phone(phone):
-    if "+" not in phone:
+
+def fix_phone(phone: str):
+    if not phone.startswith('+'):
         return f"+{phone}"
     return phone

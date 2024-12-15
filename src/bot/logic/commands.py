@@ -1,21 +1,19 @@
-"""This file represents a start logic."""
-
 import re
-import asyncio
 
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
-from aiogram.filters import CommandStart
 
+from src.cache import Cache
 from src.db.database import Database
 from src.bot.structures.keyboards import common
 from src.bot.structures.fsm.order import OrderGroup
 from src.bot.structures.fsm.registration import RegisterGroup
-from src.language.translator import LocalizedTranslator
-from src.bot.utils.messages import default_languages, check_phone
-from src.cache import Cache
+from src.bot.utils.messages import default_languages, check_phone, get_product_info
+from src.bot.utils.transliterate import transliterate
+from src.bot.filters.user_filter import UserFilter
 
 commands_router = Router(name='commands')
+commands_router.message.filter(UserFilter())
 
 
 @commands_router.message(F.text.in_({'✅ Buyurtma berish', '✅ Буюртма бериш'}))
@@ -29,7 +27,7 @@ async def order_handler(message: types.Message, cache: Cache, db: Database, stat
 
     await message.answer(
         default_languages[lang]['category_select'],
-        reply_markup=common.show_products(data=products)
+        reply_markup=common.show_products(data=products, user_lang=lang)
     )
 
     await state.set_state(OrderGroup.get_product)
@@ -51,17 +49,12 @@ async def show_product_info(c: types.CallbackQuery, cache: Cache, db: Database, 
     await state.set_data(
         dict(
             product_id=c.data,
-            product_price=int(product.price),
-            product_min_count=product.min_count
+            product_price=int(product.price)
         )
     )
 
-    msg = f"📦 Маҳсулотлар: {product.product_name}\n" \
-          f"✅ Hархи: {formatted_number} so'm\n" \
-          f"🚚 Етказиб бериш Бепул"
-    
+    msg = get_product_info(lang, product.product_name, formatted_number)
     await c.message.edit_text(msg, reply_markup=common.make_order_or_back(lang))
-    
     await state.set_state(OrderGroup.to_order)
 
 @commands_router.callback_query(OrderGroup.to_order)
@@ -81,7 +74,7 @@ async def show_product_info(c: types.CallbackQuery, cache: Cache, db: Database, 
 
         await c.message.edit_text(
             default_languages[lang]['category_select'],
-            reply_markup=common.show_products(data=products)
+            reply_markup=common.show_products(data=products, user_lang=lang)
         )
 
         await state.set_state(OrderGroup.get_product)
@@ -91,8 +84,13 @@ async def get_count_handler(message: types.Message, cache: Cache, db: Database, 
     data = await state.get_data()
     product_id = int(data.get('product_id'))
     product_price = int(data.get('product_price'))
-    product_min_count = int(data.get('product_min_count'))
+    min_count = await cache.get("min_count")
     match = re.search(r'\d+', message.text)
+
+    if min_count:
+        product_min_count = int(min_count.decode())
+    else:
+        product_min_count = 2
 
     k = f'lang_{message.from_user.id}'
     lang = await cache.get(k)
@@ -112,7 +110,7 @@ async def get_count_handler(message: types.Message, cache: Cache, db: Database, 
             )
             await state.clear()
         else:
-            await message.answer("Minimal 2 ta tovar harid qilishingiz mumkin")
+            await message.answer(default_languages[lang]["min_count_product"].format(product_min_count))
     else:
         await message.answer(default_languages[lang]['invalid_quantity'])
 
@@ -126,13 +124,13 @@ async def my_orders_handler(message: types.Message, cache: Cache, db: Database, 
     if orders:
         msg = default_languages[lang]["order"] + '\n\n'
         for order in orders:
-            msg += f"Order #{order.id}\n"
-            msg += "Status: TO'LANGAN\n"
-            msg += f"Address: https://www.google.com/maps?q={order.lat_long}\n"
+            msg += f"Buyurtma #{order.id}\n"
+            msg += "Holati: TO'LANGAN\n"
+            msg += f"Manzil: https://www.google.com/maps?q={order.lat_long}\n"
             msg += f"Jami narx: {order.total_price}\n"
             msg += f"Buyurtma berilgan sana: {order.created_at}\n\n"
 
-        await message.answer(msg)
+        await message.answer(transliterate(msg, lang))
     else:
         await message.answer(default_languages[lang]["order_not_found"])
     
@@ -141,10 +139,14 @@ async def contact_handler(message: types.Message, state: FSMContext):
     await message.answer("📞 +998916694474\n📩 @Ruqiyasuv")
 
 @commands_router.message(F.text.in_({'⚙️ Sozlamalar', '⚙️ Созламалар'}))
-async def settings_handler(message: types.Message, state: FSMContext):
+async def settings_handler(message: types.Message, cache: Cache, state: FSMContext):
+    k = f'lang_{message.from_user.id}'
+    lang = await cache.get(k)
+    lang = lang.decode()
+
     await message.answer(
-        "Kerakli sozlamalarni tanlang:", 
-        reply_markup=common.show_settings()
+        transliterate("Kerakli sozlamalarni tanlang:", lang), 
+        reply_markup=common.show_settings(lang)
     )
     await state.set_state(RegisterGroup.choose_option)
 
@@ -158,7 +160,7 @@ async def choose_option_handler(c: types.CallbackQuery, cache: Cache, db: Databa
     await c.answer()
 
     if c.data == 'change_lang':
-        await c.message.answer("Kerakli tilni tanlang:", reply_markup=common.get_languages())
+        await c.message.answer(transliterate("Kerakli tilni tanlang:", lang), reply_markup=common.get_languages())
         await state.set_state(RegisterGroup.change_lang)
     
     elif c.data == 'change_phone_number':
@@ -175,8 +177,8 @@ async def choose_option_handler(c: types.CallbackQuery, cache: Cache, db: Databa
 @commands_router.callback_query(RegisterGroup.change_lang)
 async def change_lang_handler(c: types.CallbackQuery, cache: Cache, db: Database, state: FSMContext):
     k = f'lang_{c.from_user.id}'
-    lang = await cache.get(k)
-    lang = lang.decode()
+    # lang = await cache.get(k)
+    # lang = lang.decode()
 
     await c.answer()
 
@@ -184,12 +186,13 @@ async def change_lang_handler(c: types.CallbackQuery, cache: Cache, db: Database
         case 'lang_uz': lang = 'LATIN'
         case 'lang_ru': lang = 'CYRILLIC'
 
+    await cache.set(k, lang)
     await db.user.update_user(
         user_id=c.from_user.id,
         language_code=lang
     )
 
-    await c.message.answer("Muvaqqiyatli o'zgardi", reply_markup=common.get_main_menu(lang))
+    await c.message.answer(transliterate("Muvaqqiyatli o'zgardi", lang), reply_markup=common.get_main_menu(lang))
     await state.clear()
 
 @commands_router.message(F.contact | F.text, RegisterGroup.change_phone_number)
@@ -199,11 +202,11 @@ async def change_contact_handler(message: types.Message, cache: Cache, db: Datab
     lang = lang.decode()
 
     if message.contact:
-        await message.answer("Muvafaqiyatli o'zgardi")
+        await message.answer(transliterate("Muvafaqiyatli o'zgardi", lang))
         phone_number = message.contact.phone_number
     elif message.text:
         if check_phone(message.text):
-            await message.answer("Muvafaqiyatli o'zgardi", reply_markup=common.get_main_menu(lang))
+            await message.answer(transliterate("Muvafaqiyatli o'zgardi", lang), reply_markup=common.get_main_menu(lang))
             phone_number = message.text
         else:
             return await message.answer(default_languages[lang]['sorry'])
@@ -212,6 +215,7 @@ async def change_contact_handler(message: types.Message, cache: Cache, db: Datab
         user_id=message.from_user.id,
         phone_number=phone_number
     )
+    await state.clear()
 
 @commands_router.message(RegisterGroup.change_fullname)
 async def change_fullname_handler(message: types.Message, cache: Cache, db: Database, state: FSMContext):
@@ -242,8 +246,8 @@ async def cart_handler(message: types.Message, cache: Cache, db: Database, state
             result += f"Tovar soni: {cart_product.total_count}\n"
             formatted_cart_price = "{:,}".format(int(cart_product.total_price)) 
             result += f"Umumiy summa: {formatted_cart_price}\n\n"
-
-        await message.answer(result, reply_markup=common.show_regions())
+        
+        await message.answer(transliterate(result, lang), reply_markup=common.show_regions(lang))
         await state.set_state(OrderGroup.show_regions)
     else:
         await message.answer(default_languages[lang]['product_not_cart'])
@@ -259,7 +263,7 @@ async def show_districts(c: types.CallbackQuery, cache: Cache, db: Database, sta
 
     if c.data == 'Farg‘ona':
         await state.set_data(dict(region=c.data))
-        await c.message.edit_reply_markup(reply_markup=common.show_distincts(c.data))
+        await c.message.edit_reply_markup(reply_markup=common.show_distincts(c.data, lang))
         await state.set_state(OrderGroup.show_districts)
     else:
         await c.message.answer(
@@ -276,7 +280,7 @@ async def show_districts(c: types.CallbackQuery, cache: Cache, db: Database, sta
 
     await state.update_data(dict(district=c.data))
     await c.message.delete()
-    await c.message.answer(default_languages[lang]["send_location_order"], reply_markup=common.get_location())
+    await c.message.answer(default_languages[lang]["send_location_order"], reply_markup=common.get_location(lang))
     await state.set_state(OrderGroup.get_geo)
 
 @commands_router.message(F.location)
