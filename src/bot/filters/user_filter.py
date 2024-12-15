@@ -12,7 +12,8 @@ class UserFilter(BaseFilter):
         async with AsyncSession(bind=kwargs['engine']) as session:
             db = Database(session)
             user = await db.user.get_me(message.from_user.id)
-            if user.is_blocked:
-                return False
+            if user:
+                if user.is_blocked:
+                    return False
             return True
 
