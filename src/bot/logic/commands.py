@@ -126,11 +126,13 @@ async def my_orders_handler(message: types.Message, cache: Cache, db: Database, 
         for order in orders:
             msg += f"Buyurtma #{order.id}\n"
             msg += "Holati: TO'LANGAN\n"
-            msg += f"Manzil: https://www.google.com/maps?q={order.lat_long}\n"
-            msg += f"Jami narx: {order.total_price}\n"
+            msg += "Manzil: {}\n"
+            formatted_price = "{:,}".format(int(order.total_price)) 
+            msg += f"Jami narx: {formatted_price}\n"
             msg += f"Buyurtma berilgan sana: {order.created_at}\n\n"
-
-        await message.answer(transliterate(msg, lang))
+        
+        result = transliterate(msg, lang)
+        await message.answer(result.format(f"https://www.google.com/maps?q={order.lat_long}"))
     else:
         await message.answer(default_languages[lang]["order_not_found"])
     
@@ -283,7 +285,7 @@ async def show_districts(c: types.CallbackQuery, cache: Cache, db: Database, sta
     await c.message.answer(default_languages[lang]["send_location_order"], reply_markup=common.get_location(lang))
     await state.set_state(OrderGroup.get_geo)
 
-@commands_router.message(F.location)
+@commands_router.message(OrderGroup.get_geo, F.location)
 async def cart_handler(message: types.Message, cache: Cache, db: Database, state: FSMContext):
     cart_products = await db.cart.get_cart_products(user_id=message.from_user.id)
     user = await db.user.get_me(user_id=message.from_user.id)
@@ -301,14 +303,14 @@ async def cart_handler(message: types.Message, cache: Cache, db: Database, state
 
     total_price = 0
 
-    result = "Yangi buyurtma!\n\n"
+    result = "Yangi buyurtma!\n"
+    result = "Holati: 🟡 Kutilmoqda\n\n"
     result += f"Foydalanuvchi: {user.full_name}\n"
     result += f"Telefon raqam: {user.phone_number}\n"
     result += f"Manzil: https://www.google.com/maps?q={lat},{lon}\n"
     result += f"Viloyat: {region}\n"
     result += f"Shahar: {district}\n\n"
 
-    cart_ids = []
     for cart_product in cart_products:
         result += f"Buyurtma:\n"
         product = await db.product.get(cart_product.product_id)
@@ -331,7 +333,20 @@ async def cart_handler(message: types.Message, cache: Cache, db: Database, state
 
     await message.bot.send_message(
         chat_id=-1002256139682,
-        text=result
+        text=result,
+        reply_markup=common.get_order()
     )
     await message.answer(default_languages[lang]['order__'], reply_markup=common.get_main_menu(lang))
-    await state.set_state(OrderGroup.show_regions)
+    await state.clear()
+
+
+@commands_router.callback_query(F.data=='get_order')
+async def show_districts(c: types.CallbackQuery, cache: Cache, db: Database, state: FSMContext):
+    msg_text = c.message.text
+    new_status = "Holati: 🟢 Qabul qilindi\n" \
+                 f"Kuryer haqida ma'lumot:\n" \
+                 f"Ismi: {c.from_user.first_name}\n" \
+                 f"Telegram akkaunt: @{c.from_user.username}\n\n"
+    new_text = msg_text.replace("Holati: 🟡 Kutilmoqda\n\n", new_status)
+
+    await c.message.edit_text(text=new_text)

@@ -37,14 +37,23 @@ async def process_admin_panel(
 ):
     now = datetime.now()
     user_count = len(await db.user.get_many())
-    orders_by_day = len(await db.order.get_orders_by_day(now))
-    orders_by_week = len(await db.order.get_orders_by_week(now - timedelta(days=datetime.now().weekday())))
-    orders_by_month = len(await db.order.get_orders_by_month(now.year, now.month))
+
+    orders_by_day = await db.order.get_orders_by_day(now)
+    orders_by_week = await db.order.get_orders_by_week(now - timedelta(days=datetime.now().weekday()))
+    orders_by_month = await db.order.get_orders_by_month(now.year, now.month)
+
+    orders_by_day_sum = sum([obj.total_price for obj in orders_by_day])
+    orders_by_week_sum = sum([obj.total_price for obj in orders_by_week])
+    orders_by_month_sum = sum([obj.total_price for obj in orders_by_month])
+
+    formatted_price_by_day = "{:,}".format(orders_by_day_sum)
+    formatted_price_by_week = "{:,}".format(orders_by_week_sum)
+    formatted_price_by_month = "{:,}".format(orders_by_month_sum)
 
     msg = "Maxsulotlar sotuvi statistikasi:\n"
-    msg += f"- Bugun sotilgan tovarlar soni: {orders_by_day}\n"
-    msg += f"- Hafta davomida sotilgan tovarlar soni: {orders_by_week}\n"
-    msg += f"- Oy davomida sotilgan tovarlar soni: {orders_by_month}\n\n"
+    msg += f"- Bugun sotilgan tovarlar summasi: {formatted_price_by_day}\n"
+    msg += f"- Hafta davomida sotilgan tovarlar summasi: {formatted_price_by_week}\n"
+    msg += f"- Oy davomida sotilgan tovarlar summasi: {formatted_price_by_month}\n\n"
     msg += f"Botda {user_count}-ta foydalanuvchi mavjud"
 
     await message.answer(msg)

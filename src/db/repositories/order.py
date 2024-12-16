@@ -32,12 +32,6 @@ class OrderRepo(Repository[Order]):
         )
         await self.session.commit()
 
-    async def get_orders(self, filters):
-        result = await self.session.execute(
-            select(Order).where(filters)
-        )
-        return result.scalars().all()
-
     async def get_all_by_user_id(self, user_id: int):
         result = await self.session.scalars(
             select(Order).where(Order.user_id == user_id)
@@ -50,6 +44,12 @@ class OrderRepo(Repository[Order]):
             select(Order).filter_by(**filters).limit(1)
         )
         return product
+
+    async def get_orders(self, filters):
+        result = await self.session.execute(
+            select(Order).where(filters)
+        )
+        return result.scalars().all()
 
     async def get_orders_by_day(self, date):
         start = datetime.combine(date, datetime.min.time())

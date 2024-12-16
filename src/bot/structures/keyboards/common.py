@@ -136,3 +136,13 @@ def show_settings(user_lang: str):
     ])
 
     return keyboard
+
+
+def get_order():
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Buyurtmani olish", callback_data="get_order"),
+        ]
+    ])
+
+    return keyboard
