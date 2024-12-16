@@ -44,7 +44,7 @@ async def show_product_info(c: types.CallbackQuery, cache: Cache, db: Database, 
     lang = lang.decode()
 
     number = product.price
-    formatted_number = "{:,}".format(number)
+    formatted_number = "{:,}".format(int(number))
 
     await state.set_data(
         dict(
@@ -53,7 +53,7 @@ async def show_product_info(c: types.CallbackQuery, cache: Cache, db: Database, 
         )
     )
 
-    msg = get_product_info(lang, product.product_name, formatted_number)
+    msg = get_product_info(lang, transliterate(product.product_name, lang), formatted_number)
     await c.message.edit_text(msg, reply_markup=common.make_order_or_back(lang))
     await state.set_state(OrderGroup.to_order)
 
