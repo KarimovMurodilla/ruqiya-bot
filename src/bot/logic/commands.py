@@ -66,7 +66,10 @@ async def show_product_info(c: types.CallbackQuery, cache: Cache, db: Database, 
     await c.answer()
 
     if c.data == 'place_order':
-        await c.message.answer(default_languages[lang]['products_quantity_enter'])
+        await c.message.answer(
+            default_languages[lang]['products_quantity_enter'],
+            reply_markup=types.ReplyKeyboardRemove()
+        )
         await state.set_state(OrderGroup.get_count)
     else:
         products = await db.product.get_all_products()
@@ -106,7 +109,8 @@ async def get_count_handler(message: types.Message, cache: Cache, db: Database, 
             total_count=count
         )
         await message.answer(
-            default_languages[lang]['product_add_cart']
+            default_languages[lang]['product_add_cart'],
+            reply_markup=common.get_main_menu(lang)
         )
         await state.clear()
         # else:

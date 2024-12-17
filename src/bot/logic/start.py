@@ -48,7 +48,7 @@ async def get_lang(c: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     lang = data.get('language')
     await c.message.answer(default_languages[lang]['full_name'])
-    
+
     await state.set_state(RegisterGroup.fullname)
 
 @start_router.message(RegisterGroup.fullname)
