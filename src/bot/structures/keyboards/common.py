@@ -4,7 +4,7 @@ from aiogram.types import (
     InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, 
     KeyboardButton, KeyboardButtonRequestUsers
 )
-from src.bot.utils.messages import default_languages, regions
+from src.bot.utils.messages import default_languages, regions, translate_region
 from src.bot.utils.transliterate import transliterate
 
 
@@ -103,7 +103,7 @@ def make_order_or_back(user_lang: str):
 def show_regions(user_lang: str):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text=transliterate(region, user_lang), callback_data=region)
+            InlineKeyboardButton(text=translate_region(region, user_lang), callback_data=region)
             for region in regions
         ][n:n+3]
         for n in range(0, len(regions), 3)
@@ -114,7 +114,7 @@ def show_regions(user_lang: str):
 def show_distincts(region: str, user_lang: str):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text=transliterate(district, user_lang), callback_data=district)
+            InlineKeyboardButton(text=translate_region(district, user_lang), callback_data=district)
             for district in regions[region]
         ][n:n+3]
         for n in range(0, len(regions), 3)
@@ -142,6 +142,16 @@ def get_order():
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="Buyurtmani olish", callback_data="get_order"),
+        ]
+    ])
+
+    return keyboard
+
+
+def make_order(user_lang: str):
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=transliterate("Buyurtma berish", user_lang), callback_data="make_order"),
         ]
     ])
 

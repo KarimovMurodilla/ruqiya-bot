@@ -1401,8 +1401,3 @@ def transliterate(text: str, to_variant: str):
         return text
 
     return text
-
-
-text = "Салом {}"
-res = transliterate(text, 'CYRILLIC')
-print(res.format("Murodilla"))

@@ -84,13 +84,13 @@ async def get_count_handler(message: types.Message, cache: Cache, db: Database, 
     data = await state.get_data()
     product_id = int(data.get('product_id'))
     product_price = int(data.get('product_price'))
-    min_count = await cache.get("min_count")
+    # min_count = await cache.get("min_count")
     match = re.search(r'\d+', message.text)
 
-    if min_count:
-        product_min_count = int(min_count.decode())
-    else:
-        product_min_count = 2
+    # if min_count:
+    #     product_min_count = int(min_count.decode())
+    # else:
+    #     product_min_count = 2
 
     k = f'lang_{message.from_user.id}'
     lang = await cache.get(k)
@@ -98,19 +98,19 @@ async def get_count_handler(message: types.Message, cache: Cache, db: Database, 
 
     if match:
         count = int(match.group())
-        if count >= product_min_count:
-            await db.cart.new(
-                user_id=message.from_user.id,
-                product_id=product_id,
-                total_price=product_price * count,
-                total_count=count
-            )
-            await message.answer(
-                default_languages[lang]['product_add_cart']
-            )
-            await state.clear()
-        else:
-            await message.answer(default_languages[lang]["min_count_product"].format(product_min_count))
+        # if count >= product_min_count:
+        await db.cart.new(
+            user_id=message.from_user.id,
+            product_id=product_id,
+            total_price=product_price * count,
+            total_count=count
+        )
+        await message.answer(
+            default_languages[lang]['product_add_cart']
+        )
+        await state.clear()
+        # else:
+        #     await message.answer(default_languages[lang]["min_count_product"].format(product_min_count))
     else:
         await message.answer(default_languages[lang]['invalid_quantity'])
 
@@ -121,6 +121,8 @@ async def my_orders_handler(message: types.Message, cache: Cache, db: Database, 
     lang = await cache.get(k)
     lang = lang.decode()
 
+    lat_longs = []
+
     if orders:
         msg = default_languages[lang]["order"] + '\n\n'
         for order in orders:
@@ -130,9 +132,10 @@ async def my_orders_handler(message: types.Message, cache: Cache, db: Database, 
             formatted_price = "{:,}".format(int(order.total_price)) 
             msg += f"Jami narx: {formatted_price}\n"
             msg += f"Buyurtma berilgan sana: {order.created_at}\n\n"
+            lat_longs.append(f"https://www.google.com/maps?q={order.lat_long}")
         
         result = transliterate(msg, lang)
-        await message.answer(result.format(f"https://www.google.com/maps?q={order.lat_long}"))
+        await message.answer(result.format(*lat_longs))
     else:
         await message.answer(default_languages[lang]["order_not_found"])
     
@@ -249,7 +252,7 @@ async def cart_handler(message: types.Message, cache: Cache, db: Database, state
             formatted_cart_price = "{:,}".format(int(cart_product.total_price)) 
             result += f"Umumiy summa: {formatted_cart_price}\n\n"
         
-        await message.answer(transliterate(result, lang), reply_markup=common.show_regions(lang))
+        await message.answer(transliterate(result, lang), reply_markup=common.make_order(lang))
         await state.set_state(OrderGroup.show_regions)
     else:
         await message.answer(default_languages[lang]['product_not_cart'])
@@ -259,18 +262,36 @@ async def cart_handler(message: types.Message, cache: Cache, db: Database, state
 async def show_districts(c: types.CallbackQuery, cache: Cache, db: Database, state: FSMContext):
     k = f'lang_{c.from_user.id}'
     lang = await cache.get(k)
+    min_sum = await cache.get("min_sum")
     lang = lang.decode()
+    min_sum = int(min_sum.decode())
+    formatted_min_sum = "{:,}".format(min_sum) 
 
-    await c.answer()
+    user_products = await db.cart.get_cart_products(c.from_user.id)
+    user_products_sum = sum([int(obj.total_price) for obj in user_products])
 
-    if c.data == 'Farg‘ona':
-        await state.set_data(dict(region=c.data))
-        await c.message.edit_reply_markup(reply_markup=common.show_distincts(c.data, lang))
-        await state.set_state(OrderGroup.show_districts)
+    if c.data == 'make_order':
+        if min_sum > user_products_sum:
+            await c.answer(
+                text=transliterate(
+                    text="Buyurtma uchun tovar summasi yetarli emas. "
+                    f"Kamida {formatted_min_sum}-so'mlik harid qilishingiz kerak.",
+                    to_variant=lang
+                ),
+                show_alert=True
+            )
+            await c.answer()
+        else:
+            await c.message.edit_reply_markup(reply_markup=common.show_regions(lang))
     else:
-        await c.message.answer(
-            default_languages[lang]["connection"],
-        )
+        if c.data == 'Farg‘ona':
+            await state.set_data(dict(region=c.data))
+            await c.message.edit_reply_markup(reply_markup=common.show_distincts(c.data, lang))
+            await state.set_state(OrderGroup.show_districts)
+        else:
+            await c.message.answer(
+                default_languages[lang]["connection"],
+            )
 
 @commands_router.callback_query(OrderGroup.show_districts)
 async def show_districts(c: types.CallbackQuery, cache: Cache, db: Database, state: FSMContext):
@@ -304,7 +325,7 @@ async def cart_handler(message: types.Message, cache: Cache, db: Database, state
     total_price = 0
 
     result = "Yangi buyurtma!\n"
-    result = "Holati: 🟡 Kutilmoqda\n\n"
+    result += "Holati: 🟡 Kutilmoqda\n\n"
     result += f"Foydalanuvchi: {user.full_name}\n"
     result += f"Telefon raqam: {user.phone_number}\n"
     result += f"Manzil: https://www.google.com/maps?q={lat},{lon}\n"
@@ -343,7 +364,7 @@ async def cart_handler(message: types.Message, cache: Cache, db: Database, state
 @commands_router.callback_query(F.data=='get_order')
 async def show_districts(c: types.CallbackQuery, cache: Cache, db: Database, state: FSMContext):
     msg_text = c.message.text
-    new_status = "Holati: 🟢 Qabul qilindi\n" \
+    new_status = "Holati: 🟢 Qabul qilindi\n\n" \
                  f"Kuryer haqida ma'lumot:\n" \
                  f"Ismi: {c.from_user.first_name}\n" \
                  f"Telegram akkaunt: @{c.from_user.username}\n\n"

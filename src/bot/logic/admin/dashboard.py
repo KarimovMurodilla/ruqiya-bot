@@ -174,7 +174,7 @@ async def process_admin_panel(
     db: Database,
     cache: Cache
 ):
-    await message.answer("Tovar uchun minimal sonni kiriting")
+    await message.answer("Tovar uchun minimal narxni kiriting")
     await state.set_state(AdminGroup.set_min_sum)
 
 
@@ -188,7 +188,7 @@ async def process_admin_panel(
     if not message.text.isdigit():
         return await message.answer("Iltimos son kiriting!")
     
-    await cache.set("min_count", int(message.text))
+    await cache.set("min_sum", int(message.text))
     await message.answer("Yangilandi ✅", reply_markup=common.get_admin_menu())
     await state.clear()
 
