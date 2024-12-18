@@ -60,7 +60,7 @@ default_languages = {
         "contact": "Iltimos raqamingizni yuboring. Misol uchun shunday shaklda yoziladi: +998901234567",
         "contact_update": "Sizning telefon raqamingiz muvaffaqiyatli yangilandi:",
         "successful_registration": "Muvaffaqiyatli ro'yxatdan o'tdi",
-        "sorry": "Kechirasiz, boshqa raqamni sinab ko'ring",
+        "sorry": "Shunday ko'rinishda bo'lsin👇 +998901234567 (Misol uchun)",
         "send_number": "Raqamni yuborish",
         "min_count_product": "Minimal {} ta tovar harid qilishingiz mumkin"
     },
@@ -113,7 +113,7 @@ default_languages = {
         "full_name": "Илтимос тўлиқ исмни киритинг",
         "contact": "Илтимос рақамингизни юборинг. Мисол учун шундай шаклда ёзилади: +998901234567",
         "successful_registration": "Муваффақиятли рўйхатдан ўтди",
-        "sorry": "Кечирасиз, бошқа рақамни синаб кўринг",
+        "sorry": "Шундай кўринишда бўлсин👇 +998901234567 (Мисол учун)",
         "send_number": "Ракамни юбориш",
         "min_count_product": "Минимал {} та товар ҳарид қилишингиз мумкин"
     }
