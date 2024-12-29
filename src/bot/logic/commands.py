@@ -11,6 +11,7 @@ from src.bot.structures.fsm.registration import RegisterGroup
 from src.bot.utils.messages import default_languages, check_phone, get_product_info
 from src.bot.utils.transliterate import transliterate
 from src.bot.filters.user_filter import UserFilter
+from src.configuration import conf
 
 commands_router = Router(name='commands')
 commands_router.message.filter(UserFilter())
@@ -327,8 +328,10 @@ async def cart_handler(message: types.Message, cache: Cache, db: Database, state
     district = data.get("district")
 
     total_price = 0
+    new_order_id = await db.order.new(user_id=message.from_user.id)
 
-    result = "Yangi buyurtma!\n"
+    result = "Yangi buyurtma!\n\n"
+    result += f"Buyurtma raqami: {new_order_id}\n"
     result += "Holati: 🟡 Kutilmoqda\n\n"
     result += f"Foydalanuvchi: {user.full_name}\n"
     result += f"Telefon raqam: {user.phone_number}\n"
@@ -336,6 +339,7 @@ async def cart_handler(message: types.Message, cache: Cache, db: Database, state
     result += f"Viloyat: {region}\n"
     result += f"Shahar: {district}\n\n"
 
+    data = []
     for cart_product in cart_products:
         result += f"Buyurtma:\n"
         product = await db.product.get(cart_product.product_id)
@@ -344,34 +348,53 @@ async def cart_handler(message: types.Message, cache: Cache, db: Database, state
         formatted_cart_price = "{:,}".format(int(cart_product.total_price)) 
         result += f"Umumiy summa: {formatted_cart_price}\n\n"
         total_price += cart_product.total_price
+        data.append((cart_product.id, product.product_name, cart_product.total_price, cart_product.total_count))
 
-        await db.cart.delete_cart(cart_id=cart_product.id)
+    # Add order
+    for i in data:
+        await db.order.new_item(
+            order_id=new_order_id,
+            user_id=message.from_user.id,
+            product_name=i[1],
+            total_price=i[2],
+            total_count=i[3],
+            lat_long=f"{lat},{lon}"
+        )
+    
+    # Clear cart
+    for j in data:
+        await db.cart.delete_cart(cart_id=j[0])
+
 
     formatted_price = "{:,}".format(total_price) 
     result += f"Jami narx: {formatted_price}"
 
-    await db.order.new(
-        user_id=user.user_id,
-        total_price=total_price,
-        lat_long=f"{lat},{lon}"
-    )
-
     await message.bot.send_message(
-        chat_id=-1002256139682,
+        chat_id=conf.CHAT_ID,
         text=result,
-        reply_markup=common.get_order()
+        reply_markup=common.get_order(new_order_id)
     )
     await message.answer(default_languages[lang]['order__'], reply_markup=common.get_main_menu(lang))
     await state.clear()
 
 
-@commands_router.callback_query(F.data=='get_order')
+@commands_router.callback_query(F.data.startswith('get_order'))
 async def show_districts(c: types.CallbackQuery, cache: Cache, db: Database, state: FSMContext):
+    user = await db.user.get_me(user_id=c.from_user.id)
+    if not user:
+        return await c.answer("Iltimos avval bot orqali ro'yxatdan o'ting", show_alert=True)
+    
     msg_text = c.message.text
     new_status = "Holati: 🟢 Qabul qilindi\n\n" \
                  f"Kuryer haqida ma'lumot:\n" \
                  f"Ismi: {c.from_user.first_name}\n" \
                  f"Telegram akkaunt: @{c.from_user.username}\n\n"
     new_text = msg_text.replace("Holati: 🟡 Kutilmoqda\n\n", new_status)
+
+    _, order_id = c.data.split()
+    await db.approved_order.new(
+        user_id=c.from_user.id,
+        order_id=int(order_id)
+    )
 
     await c.message.edit_text(text=new_text)

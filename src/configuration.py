@@ -82,8 +82,9 @@ class Configuration:
     MEDIA_URL = Path(__file__).parent / "media"
     IMAGE_DIR = Path(__file__).parent / "media" / "images"
     IMAGE_DIR.mkdir(parents=True, exist_ok=True)
-
+    
     ADMINS = list(map(int, getenv("ADMINS").split(',')))
+    CHAT_ID: str = getenv('CHAT_ID')
     SECRET_KEY: str = getenv('SECRET_KEY')
     ADMIN_LOGIN = getenv('ADMIN_LOGIN')
     ADMIN_PASSWORD = getenv('ADMIN_PASSWORD')

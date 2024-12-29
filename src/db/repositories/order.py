@@ -2,12 +2,12 @@
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.bot.structures.role import Role
 
-from ..models import Base, Order
+from ..models import Base, Order, OrderItem
 from .abstract import Repository
 
 
@@ -19,14 +19,55 @@ class OrderRepo(Repository[Order]):
 
     async def new(
         self,
+        user_id: int
+    ) -> int:
+        order_id = await self._create_order(user_id=user_id)
+        return order_id
+
+    async def new_item(
+        self,
+        order_id: int,
         user_id: int,
+        product_name: str,
         total_price: int,
+        total_count: int,
+        lat_long: str
+    ) -> None:
+        await self._create_order_item(
+            user_id=user_id,
+            order_id=order_id,
+            product_name=product_name,
+            total_price=total_price,
+            total_count=total_count,
+            lat_long=lat_long
+        )
+    
+    async def _create_order(
+        self,
+        user_id: int
+    ) -> None:
+        stmt = insert(Order).values(user_id=user_id).returning(Order.id)
+        result = await self.session.execute(stmt)
+        order_id = result.scalars().one()
+
+        return order_id
+
+    async def _create_order_item(
+        self,
+        user_id: int,
+        order_id: int,
+        product_name: str,
+        total_price: int,
+        total_count: int,
         lat_long: str
     ) -> None:
         await self.session.merge(
-            Order(
+            OrderItem(
                 user_id=user_id,
+                order_id=order_id,
+                product_name=product_name,
                 total_price=total_price,
+                total_count=total_count,
                 lat_long=lat_long
             )
         )
@@ -34,33 +75,27 @@ class OrderRepo(Repository[Order]):
 
     async def get_all_by_user_id(self, user_id: int):
         result = await self.session.scalars(
-            select(Order).where(Order.user_id == user_id)
+            select(OrderItem).where(OrderItem.user_id == user_id)
         )
         orders = result.all()
         return orders
-        
-    async def get_order(self, **filters):
-        product = await self.session.scalar(
-            select(Order).filter_by(**filters).limit(1)
-        )
-        return product
 
     async def get_orders(self, filters):
         result = await self.session.execute(
-            select(Order).where(filters)
+            select(OrderItem).where(filters)
         )
         return result.scalars().all()
 
     async def get_orders_by_day(self, date):
         start = datetime.combine(date, datetime.min.time())
         end = datetime.combine(date, datetime.max.time())
-        filters = and_(Order.created_at >= start, Order.created_at <= end)
+        filters = and_(OrderItem.created_at >= start, OrderItem.created_at <= end)
         return await self.get_orders(filters)
 
     async def get_orders_by_week(self, start_date):
         start = datetime.combine(start_date, datetime.min.time())
         end = start + timedelta(days=6, hours=23, minutes=59, seconds=59)
-        filters = and_(Order.created_at >= start, Order.created_at <= end)
+        filters = and_(OrderItem.created_at >= start, OrderItem.created_at <= end)
         return await self.get_orders(filters)
 
     async def get_orders_by_month(self, year, month):
@@ -69,5 +104,5 @@ class OrderRepo(Repository[Order]):
             end = datetime(year + 1, 1, 1) - timedelta(seconds=1)
         else:
             end = datetime(year, month + 1, 1) - timedelta(seconds=1)
-        filters = and_(Order.created_at >= start, Order.created_at <= end)
+        filters = and_(OrderItem.created_at >= start, OrderItem.created_at <= end)
         return await self.get_orders(filters)

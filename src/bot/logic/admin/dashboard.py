@@ -1,6 +1,7 @@
 import asyncio
 
 from datetime import datetime, timedelta
+from collections import defaultdict
 
 from aiogram import F, types
 from aiogram.fsm.context import FSMContext
@@ -50,13 +51,72 @@ async def process_admin_panel(
     formatted_price_by_week = "{:,}".format(orders_by_week_sum)
     formatted_price_by_month = "{:,}".format(orders_by_month_sum)
 
-    msg = "Maxsulotlar sotuvi statistikasi:\n"
+    data_by_day = defaultdict(int)
+    for obj in orders_by_day:
+        data_by_day[obj.product_name] += obj.total_count
+
+    data_by_week = defaultdict(int)
+    for obj in orders_by_day:
+        data_by_week[obj.product_name] += obj.total_count
+
+    data_by_month = defaultdict(int)
+    for obj in orders_by_day:
+        data_by_month[obj.product_name] += obj.total_count
+
+    msg = "💸 Maxsulotlar sotuv summasi statistikasi:\n"
     msg += f"- Bugun sotilgan tovarlar summasi: {formatted_price_by_day}\n"
     msg += f"- Hafta davomida sotilgan tovarlar summasi: {formatted_price_by_week}\n"
     msg += f"- Oy davomida sotilgan tovarlar summasi: {formatted_price_by_month}\n\n"
-    msg += f"Botda {user_count}-ta foydalanuvchi mavjud"
+
+    msg += "🧮 Maxsulotlar sotuv soni statistikasi:\n\n"
+    msg += f"📅 Bugun sotilgan maxsulotlar soni:\n"
+    for product, count in data_by_day.items():
+        msg += f"- {product}: {count} dona\n"
+    msg += "\n"
+
+    msg += f"📅 Hafta davomida sotilgan maxsulotlar soni:\n"
+    for product, count in data_by_week.items():
+        msg += f"- {product}: {count} dona\n"
+    msg += "\n"
+
+    msg += f"📅 Oy davomida sotilgan maxsulotlar soni:\n"
+    for product, count in data_by_month.items():
+        msg += f"- {product}: {count} dona\n"
+    msg += "\n\n"
+
+    msg += f"👤 Botda {user_count}-ta foydalanuvchi mavjud"
 
     await message.answer(msg)
+
+
+@admin_router.message(F.text=='👤 Kuryerlar statistikasi', AdminFilter())
+async def process_admin_panel(
+    message: Message, 
+    db: Database,
+):
+    employee_stats = defaultdict(lambda: defaultdict(int))
+
+    data = await db.approved_order.get_approved_order_with_joined_data()
+
+    for obj in data:
+        for item in obj.order.order_items:
+            employee_stats[f"{obj.user.full_name}, {obj.user.phone_number}"][item.product_name] += item.total_count
+
+    msg = "Kuryerlar statistikasi:\n\n"
+    for employee, products in employee_stats.items():
+        msg += f"{employee}:\n"
+        for product, count in products.items():
+            msg += f"  - {product}: {count} dona\n"
+        msg += "\n"
+
+    await message.answer(msg, reply_markup=common.set_status_checked())
+
+
+@admin_router.callback_query(F.data=='set_status_checked', AdminFilter())
+async def process_admin_panel(c: CallbackQuery, db: Database):
+    await db.approved_order.set_status_checked()
+    await c.message.edit_text("Tozalandi ✅")
+
 
 @admin_router.message(F.text=='✍️ Habar yuborish', AdminFilter())
 async def process_admin_panel(

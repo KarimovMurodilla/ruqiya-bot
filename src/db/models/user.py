@@ -3,7 +3,7 @@ import datetime
 from typing import Annotated, Optional
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.bot.structures.role import Role
 
@@ -37,6 +37,8 @@ class User(Base):
     )
     role: Mapped[Role] = mapped_column(sa.Enum(Role), default=Role.USER)
     created_at: Mapped[Optional[Annotated[datetime.datetime, mapped_column(nullable=False, default=datetime.datetime.utcnow)]]]
+
+    approved_orders = relationship("ApprovedOrder", back_populates="user")
 
     def __str__(self):
         return f"{self.full_name}"

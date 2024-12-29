@@ -24,18 +24,26 @@ async def start_handler(message: types.Message, db: Database, state: FSMContext)
     user = await db.user.get_me(message.from_user.id)
 
     if not user:
-        await message.answer_photo(
-            "AgACAgIAAxkBAAIS-GddHv939Sv1blKDHWMjtn57WHL_AAKp7DEbPPIwSkjvRmUFSUNcAQADAgADeQADNgQ",
-            caption=default_languages['welcome_message'],
+        await message.answer(
+            default_languages['welcome_message'],
             reply_markup=common.get_languages()
         )
+        # await message.answer_photo(
+        #     "AgACAgIAAxkBAAIS-GddHv939Sv1blKDHWMjtn57WHL_AAKp7DEbPPIwSkjvRmUFSUNcAQADAgADeQADNgQ",
+        #     caption=default_languages['welcome_message'],
+        #     reply_markup=common.get_languages()
+        # )
         await state.set_state(RegisterGroup.lang) 
     else:
-        await message.answer_photo(
-            "AgACAgIAAxkBAAITF2ddPJ7fa2j3Du7Ny7WR-TsgxzT_AAJD7DEbPPIwSqi6-T75nSkRAQADAgADeQADNgQ",
-            caption=introduction_template[user.language_code.value.upper()],
+        await message.answer(
+            default_languages['welcome_message'],
             reply_markup=common.get_main_menu(user.language_code.value.upper())
         )
+        # await message.answer_photo(
+        #     "AgACAgIAAxkBAAITF2ddPJ7fa2j3Du7Ny7WR-TsgxzT_AAJD7DEbPPIwSqi6-T75nSkRAQADAgADeQADNgQ",
+        #     caption=introduction_template[user.language_code.value.upper()],
+        #     reply_markup=common.get_main_menu(user.language_code.value.upper())
+        # )
 
 @start_router.callback_query(RegisterGroup.lang)
 async def get_lang(c: types.CallbackQuery, state: FSMContext):

@@ -52,6 +52,9 @@ def get_admin_menu(user_lang: str = 'LATIN'):
             )
         ],
         [
+            KeyboardButton(text="👤 Kuryerlar statistikasi"),
+        ],
+        [
             KeyboardButton(text="🚫 Foydalanuvchini blokdan ochish", request_users=KeyboardButtonRequestUsers(
                     request_id=2, user_is_bot=False, request_username=True, request_name=True, max_quantity=10
                 )
@@ -138,10 +141,10 @@ def show_settings(user_lang: str):
     return keyboard
 
 
-def get_order():
+def get_order(order_id: int):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Buyurtmani olish", callback_data="get_order"),
+            InlineKeyboardButton(text="Buyurtmani olish", callback_data=f"get_order {order_id}"),
         ]
     ])
 
@@ -156,3 +159,13 @@ def make_order(user_lang: str):
     ])
 
     return keyboard
+
+
+def set_status_checked():
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Tozalash", callback_data="set_status_checked") 
+        ]
+    ])
+    return keyboard
+
