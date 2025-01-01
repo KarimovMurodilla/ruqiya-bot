@@ -11,6 +11,7 @@ from src.bot.structures.fsm.registration import RegisterGroup
 from src.bot.utils.messages import default_languages, check_phone, get_product_info
 from src.bot.utils.transliterate import transliterate
 from src.bot.filters.user_filter import UserFilter
+from src.bot.filters.chat_filter import ChatFilter
 from src.configuration import conf
 
 commands_router = Router(name='commands')
@@ -419,7 +420,7 @@ async def show_districts(c: types.CallbackQuery, cache: Cache, db: Database, sta
     await c.message.edit_reply_markup(reply_markup=None)
 
 
-@commands_router.message()
+@commands_router.message(ChatFilter("private"))
 async def receive_message(message: types.Message, db: Database):
     undelivered_order = await db.order.filter_orders(
         user_id=message.from_user.id,
