@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import select, and_, insert
+from sqlalchemy import select, and_, insert, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.bot.structures.role import Role
@@ -79,6 +79,21 @@ class OrderRepo(Repository[Order]):
         )
         orders = result.all()
         return orders
+
+    async def update_status(self, order_id: int, status: bool):
+        stmt = (
+            update(Order)
+            .where(Order.id == order_id)
+            .values(status=status)
+        )
+        await self.session.execute(stmt)
+        await self.session.commit()
+
+    async def filter_orders(self, **filters):
+        result = await self.session.execute(
+            select(Order).filter_by(**filters)
+        )
+        return result.unique().scalars().all()
 
     async def get_orders(self, filters):
         result = await self.session.execute(

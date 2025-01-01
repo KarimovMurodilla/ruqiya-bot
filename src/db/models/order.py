@@ -15,6 +15,7 @@ class Order(Base):
     """Order model."""
 
     user_id: Mapped[int] = mapped_column(sa.ForeignKey("user.user_id", ondelete="CASCADE"))
+    status: Mapped[bool] = mapped_column(sa.Boolean, nullable=True, default=False)
     created_at: Mapped[Optional[Annotated[datetime.datetime, mapped_column(nullable=False, default=datetime.datetime.utcnow)]]]
     order_items: Mapped[List["OrderItem"]] = relationship("OrderItem", back_populates="order", lazy="joined")
     approved_orders = relationship("ApprovedOrder", back_populates="order")

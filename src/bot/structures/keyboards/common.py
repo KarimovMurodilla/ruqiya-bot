@@ -144,7 +144,17 @@ def show_settings(user_lang: str):
 def get_order(order_id: int):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Buyurtmani olish", callback_data=f"get_order {order_id}"),
+            InlineKeyboardButton(text="📥 Buyurtmani olish", callback_data=f"get_order {order_id}"),
+        ]
+    ])
+
+    return keyboard
+
+
+def order_complete(user_id: int, order_id: int):
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ Yetkazib berdim", callback_data=f"order_complete {user_id} {order_id}"),
         ]
     ])
 

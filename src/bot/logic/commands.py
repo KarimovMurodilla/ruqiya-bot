@@ -392,9 +392,39 @@ async def show_districts(c: types.CallbackQuery, cache: Cache, db: Database, sta
     new_text = msg_text.replace("Holati: 🟡 Kutilmoqda\n\n", new_status)
 
     _, order_id = c.data.split()
+
+    await c.message.edit_text(text=new_text, reply_markup=common.order_complete(c.from_user.id, order_id))
+
+
+@commands_router.callback_query(F.data.startswith('order_complete'))
+async def show_districts(c: types.CallbackQuery, cache: Cache, db: Database, state: FSMContext):
+    user = await db.user.get_me(user_id=c.from_user.id)
+    if not user:
+        return await c.answer("Iltimos avval bot orqali ro'yxatdan o'ting", show_alert=True)
+    
+    _, user_id, order_id = c.data.split()
+    if int(user_id) != c.from_user.id:
+        return await c.answer("Buyurtmani boshqa kuryer qabul qilgan")
+    
     await db.approved_order.new(
         user_id=c.from_user.id,
         order_id=int(order_id)
     )
 
-    await c.message.edit_text(text=new_text)
+    await db.order.update_status(
+        order_id=int(order_id),
+        status=True
+    )
+
+    await c.message.edit_reply_markup(reply_markup=None)
+
+
+@commands_router.message()
+async def receive_message(message: types.Message, db: Database):
+    undelivered_order = await db.order.filter_orders(
+        user_id=message.from_user.id,
+        status=False
+    )
+
+    if undelivered_order:
+        return await message.answer("Iltimos kuting. Tez orada buyurtmangiz yetib boradi.")
