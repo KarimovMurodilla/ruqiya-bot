@@ -2,13 +2,11 @@
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import select, and_, insert, update
+from sqlalchemy import select, and_, insert, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.bot.structures.role import Role
-
-from ..models import Base, Order, OrderItem
 from .abstract import Repository
+from ..models.order import Order, OrderItem, OrderStatus
 
 
 class OrderRepo(Repository[Order]):
@@ -80,7 +78,7 @@ class OrderRepo(Repository[Order]):
         orders = result.all()
         return orders
 
-    async def update_status(self, order_id: int, status: bool):
+    async def update_status(self, order_id: int, status: OrderStatus):
         stmt = (
             update(Order)
             .where(Order.id == order_id)
@@ -94,7 +92,14 @@ class OrderRepo(Repository[Order]):
             select(Order).filter_by(**filters)
         )
         return result.unique().scalars().all()
+    
+    async def delete_order(self, order_id: int):
+        stmt = delete(Order).where(Order.id == order_id)
+        await self.session.execute(stmt)
+        await self.session.commit()
 
+    
+    # OrderItem methods
     async def get_orders(self, filters):
         result = await self.session.execute(
             select(OrderItem).where(filters)
@@ -121,3 +126,4 @@ class OrderRepo(Repository[Order]):
             end = datetime(year, month + 1, 1) - timedelta(seconds=1)
         filters = and_(OrderItem.created_at >= start, OrderItem.created_at <= end)
         return await self.get_orders(filters)
+    

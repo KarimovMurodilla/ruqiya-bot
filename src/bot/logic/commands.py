@@ -4,6 +4,7 @@ from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 
 from src.cache import Cache
+from src.configuration import conf
 from src.db.database import Database
 from src.bot.structures.keyboards import common
 from src.bot.structures.fsm.order import OrderGroup
@@ -12,7 +13,7 @@ from src.bot.utils.messages import default_languages, check_phone, get_product_i
 from src.bot.utils.transliterate import transliterate
 from src.bot.filters.user_filter import UserFilter
 from src.bot.filters.chat_filter import ChatFilter
-from src.configuration import conf
+from src.db.models.order import OrderStatus
 
 commands_router = Router(name='commands')
 commands_router.message.filter(UserFilter())
@@ -414,18 +415,43 @@ async def show_districts(c: types.CallbackQuery, cache: Cache, db: Database, sta
 
     await db.order.update_status(
         order_id=int(order_id),
-        status=True
+        status=OrderStatus.DELIVERED
     )
 
     await c.message.edit_reply_markup(reply_markup=None)
+
+
+@commands_router.callback_query(F.data.startswith('order_cancel'))
+async def show_districts(c: types.CallbackQuery, cache: Cache, db: Database, state: FSMContext):
+    user = await db.user.get_me(user_id=c.from_user.id)
+    if not user:
+        return await c.answer("Iltimos avval bot orqali ro'yxatdan o'ting", show_alert=True)
+    
+    _, user_id, order_id = c.data.split()
+    if int(user_id) != c.from_user.id:
+        return await c.answer("Buyurtmani boshqa kuryer qabul qilgan")
+
+    await db.order.update_status(
+        order_id=int(order_id),
+        status=OrderStatus.CANCELLED
+    )
+
+    msg_text = c.message.text
+    new_status = "Holati: 🔴 Bekor qilindi\n\n"
+    new_text = msg_text.replace("Holati: 🟢 Qabul qilindi\n\n", new_status)
+
+    await c.message.edit_text(
+        text=new_text,
+        reply_markup=None
+    )
 
 
 @commands_router.message(ChatFilter("private"))
 async def receive_message(message: types.Message, db: Database):
     undelivered_order = await db.order.filter_orders(
         user_id=message.from_user.id,
-        status=False
+        status=OrderStatus.PENDING
     )
 
     if undelivered_order:
-        return await message.answer("Iltimos kuting. Tez orada buyurtmangiz yetib boradi.")
+        return await message.answer("Iltimos kuting. Buyurtmangiz tez orada yetib boradi.")

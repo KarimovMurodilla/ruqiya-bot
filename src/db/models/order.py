@@ -1,21 +1,24 @@
-"""User model file."""
 import datetime
-from typing import Annotated, Optional, List
 import sqlalchemy as sa
-import sqlalchemy.orm as orm
+
+from enum import Enum
+from typing import Annotated, Optional, List
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.bot.structures.role import Role
-
 from .base import Base
-from ...language.enums import Locales
+
+
+class OrderStatus(Enum):
+    PENDING = "pending"
+    DELIVERED = "delivered"
+    CANCELLED = "cancelled"
 
 
 class Order(Base):
     """Order model."""
 
     user_id: Mapped[int] = mapped_column(sa.ForeignKey("user.user_id", ondelete="CASCADE"))
-    status: Mapped[bool] = mapped_column(sa.Boolean, nullable=True, default=False)
+    status: Mapped[OrderStatus] = mapped_column(sa.Enum(OrderStatus), nullable=True, default=OrderStatus.PENDING)
     created_at: Mapped[Optional[Annotated[datetime.datetime, mapped_column(nullable=False, default=datetime.datetime.utcnow)]]]
     order_items: Mapped[List["OrderItem"]] = relationship("OrderItem", back_populates="order", lazy="joined")
     approved_orders = relationship("ApprovedOrder", back_populates="order")

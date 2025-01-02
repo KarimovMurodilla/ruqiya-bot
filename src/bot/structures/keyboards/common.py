@@ -155,6 +155,9 @@ def order_complete(user_id: int, order_id: int):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="✅ Yetkazib berdim", callback_data=f"order_complete {user_id} {order_id}"),
+        ],
+        [
+            InlineKeyboardButton(text="❌ Bekor qilish", callback_data=f"order_cancel {user_id} {order_id}")
         ]
     ])
 
